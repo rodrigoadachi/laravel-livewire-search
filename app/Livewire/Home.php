@@ -22,7 +22,6 @@ class Home extends Component
   public $showModal = false;
   public $isEditing = false;
   public $perPage = 5;
-  public $page = 1;
 
   public $productId, $name, $price, $stock;
 
@@ -179,24 +178,6 @@ class Home extends Component
       'categories' => Category::all(),
       'brands' => Brand::all()
     ]);
-  }
-
-  public function previousPage()
-  {
-    if ($this->page > 1) {
-
-      $this->setPage($this->page - 1);
-
-      $this->updateURL();
-    }
-  }
-
-  public function nextPage()
-  {
-    if ($this->page < $this->getMaxPage()) {
-      $this->setPage($this->page + 1);
-      $this->updateURL();
-    }
   }
 
   private function getMaxPage()
