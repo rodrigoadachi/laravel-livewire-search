@@ -6,6 +6,7 @@
   'variant' => 'default',
   'type' => 'button',
   'icon' => null,
+  'disabled' => false,
 ])
 
 @php
@@ -23,6 +24,7 @@
   type="{{ $type }}"
   wire:click="{{ $action ? $action : '' }}"
   x-on:click="{{ $click ? $click : '' }}"
+  :disabled="{{ $disabled ? 'true' : 'false' }}"
   wire:loading.attr="disabled"
   @if($loadingTarget)
     wire:target="{{ $loadingTarget }}"
