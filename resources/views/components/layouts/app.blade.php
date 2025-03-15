@@ -18,7 +18,7 @@
       >
         {{ $slot }}
         <x-loading />
-        <x-snackbar />
+        <x-alert />
       </main>
 
       @livewireScripts
