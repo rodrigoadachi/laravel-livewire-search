@@ -1,9 +1,9 @@
 @php
   $config = [
-    ['id' => 'name', 'label' => 'Nome'],
-    ['id' => 'category.name', 'label' => 'Categoria'],
-    ['id' => 'brand.name', 'label' => 'Marca'],
-    ['id' =>  'description', 'label' => 'Descrição'],
+    ['id' => 'name', 'label' => 'Nome', 'orderable' => true],
+    ['id' => 'category.name', 'label' => 'Categoria', 'orderable' => true],
+    ['id' => 'brand.name', 'label' => 'Marca', 'orderable' => true],
+    ['id' =>  'description', 'label' => 'Descrição', 'orderable' => false],
     [
       'id' => 'action',
       'label' => 'Ações',
@@ -21,7 +21,7 @@
   <x-pages.home.header :categories="$categories" :brands="$brands" />
 
   <div class="mt-4 w-full">
-    <x-table :data="$products" :config="$config" itemCountText="Produtos cadastrados" />
+    <x-table :data="$products" :config="$config" itemCountText="Produtos cadastrados" :sortField="$sortField" :sortDirection="$sortDirection" />
   </div>
 
   <x-modal :title="$isEditing ? 'Editar Produto' : 'Adicionar Produto'" width="50%" :show="$showModal">

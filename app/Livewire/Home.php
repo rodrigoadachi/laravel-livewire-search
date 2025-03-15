@@ -22,6 +22,8 @@ class Home extends Component
   public $showModal = false;
   public $isEditing = false;
   public $perPage = 10;
+  public $sortField = 'name';
+  public $sortDirection = 'asc';
 
   public $productId, $name, $price, $stock;
 
@@ -35,6 +37,8 @@ class Home extends Component
     $this->selectedBrands = array_filter(explode(',', Request::query('brands', '')));
     $this->perPage = Request::query('perPage', 10);
     $this->page = Request::query('page', 1);
+    $this->sortField = Request::query('sortField', 'name');
+    $this->sortDirection = Request::query('sortDirection', 'asc');
   }
 
   public function dehydrate()
@@ -173,11 +177,37 @@ class Home extends Component
       $productsQuery->whereIn('brand_id', $this->selectedBrands);
     }
 
+    if ($this->sortField === 'category.name') {
+      $productsQuery->join('categories', 'products.category_id', '=', 'categories.id')
+        ->orderBy('categories.name', $this->sortDirection);
+    } elseif ($this->sortField === 'brand.name') {
+      $productsQuery->join('brands', 'products.brand_id', '=', 'brands.id')
+        ->orderBy('brands.name', $this->sortDirection);
+    } else {
+      $productsQuery->orderBy($this->sortField, $this->sortDirection);
+    }
+
+
     return view('livewire.home', [
       'products' => $productsQuery->paginate($this->perPage),
       'categories' => Category::all(),
-      'brands' => Brand::all()
+      'brands' => Brand::all(),
+      'perPage' => $this->perPage,
+      'sortField' => $this->sortField,
+      'sortDirection' => $this->sortDirection,
     ]);
+  }
+
+  public function sortBy($field)
+  {
+    $this->sortField = $field;
+    $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+  }
+
+  public function sortByCategory()
+  {
+    $this->sortField = 'category.name';
+    $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
   }
 
   private function getMaxPage()
@@ -192,6 +222,8 @@ class Home extends Component
       'categories' => implode(',', array_filter($this->selectedCategories)),
       'brands' => implode(',', array_filter($this->selectedBrands)),
       'perPage' => $this->perPage,
+      'sortField' => $this->sortField,
+      'sortDirection' => $this->sortDirection,
     ]);
   }
 

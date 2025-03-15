@@ -1,10 +1,23 @@
-@props(['data', 'config', 'itemCountText' => 'Total de itens cadastrados'])
+@props(['data', 'config', 'itemCountText' => 'Total de itens cadastrados', 'sortField', 'sortDirection'])
 
 <table class="min-w-full border border-gray-700 rounded-md w-full">
   <thead class="bg-zinc-800 text-white">
     <tr>
       @foreach ($config as $column)
-        <th class="p-2 border-b">{{ $column['label'] }}</th>
+        <th class="p-2 border-b">
+          <div class="inline-flex items-center gap-2 justify-start">
+            @if (isset($column['orderable']) && $column['orderable'])
+              <button
+                wire:click="sortBy('{{ $column['id'] }}')"
+                class="flex flex-col items-center gap-0"
+              >
+                <x-dynamic-component :component="'heroicon-o-chevron-up'" class="size-4 cursor-pointer hover:text-blue-500 {{ $sortField === $column['id'] && $sortDirection === 'asc' ? 'text-blue-500' : 'text-gray-400' }}" />
+                <x-dynamic-component :component="'heroicon-o-chevron-down'" class="size-4 cursor-pointer hover:text-blue-500 {{ $sortField === $column['id'] && $sortDirection === 'desc' ? 'text-blue-500' : 'text-gray-400' }}" />
+              </button>
+            @endif
+            <span>{{ $column['label'] }}</span>
+          </div>
+        </th>
       @endforeach
     </tr>
   </thead>
