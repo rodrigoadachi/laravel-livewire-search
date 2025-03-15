@@ -20,12 +20,14 @@ class Home extends Component
   public $selectedCategory = null;
   public $selectedBrand = null;
   public $showModal = false;
+  public $showConfirmDeleteModal = false;
+  public $productNameOnDelete = '';
   public $isEditing = false;
   public $perPage = 10;
   public $sortField = 'name';
   public $sortDirection = 'asc';
 
-  public $productId, $name, $price, $stock;
+  public $productId, $name, $description, $price, $stock;
 
   protected $paginationTheme = 'tailwind';
 
@@ -87,38 +89,64 @@ class Home extends Component
       if ($product) {
         $this->productId = $product->id;
         $this->name = $product->name;
-        $this->selectedCategories = [$product->category_id];
-        $this->selectedBrands = [$product->brand_id];
+        $this->description = $product->description;
+        $this->selectedCategory = $product->category_id;
+        $this->selectedBrand = $product->brand_id;
         $this->isEditing = true;
       }
     } else {
-      $this->reset(['productId', 'name', 'selectedCategories', 'selectedBrands']);
+      $this->reset(['productId', 'name', 'description', 'selectedCategory', 'selectedBrand']);
       $this->isEditing = false;
     }
     $this->showModal = true;
     $this->dispatch('hide-loading');
   }
 
+  public function confirmDeleteModal($id)
+  {
+    if ($id) {
+      $this->productId = $id;
+      $product = Product::find($id);
+      if ($product) {
+        $this->productNameOnDelete = $product->name;
+      }
+      $this->showConfirmDeleteModal = true;
+    }
+  }
+
+  public function closeConfirmDeleteModal()
+  {
+    $this->productNameOnDelete = '';
+    $this->showConfirmDeleteModal = false;
+  }
+
   public function openNewProductModal()
   {
     $this->dispatch('show-loading');
-    $this->reset(['productId', 'name', 'selectedCategory', 'selectedBrand']);
+    $this->reset(['productId', 'name', 'description', 'selectedCategory', 'selectedBrand']);
     $this->showModal = true;
     $this->dispatch('hide-loading');
   }
 
   public function closeModal()
   {
-    $this->reset(['productId', 'name', 'selectedCategory', 'selectedBrand', 'showModal', 'price', 'stock']);
+    $this->reset(['productId', 'name', 'description', 'selectedCategory', 'selectedBrand', 'showModal', 'price', 'stock']);
   }
 
   public function save()
   {
     try {
       $this->validate([
-        'name' => 'required|unique:products,name,' . ($this->productId ?? 'NULL') . ',id',
+        'name' => 'required|unique:products,name,' . ($this->productId ?? 'NULL') . ',id|unique:products,name,' . ($this->productId ?? 'NULL') . ',id',
+        'description' => 'required',
         'selectedCategory' => 'required',
         'selectedBrand' => 'required',
+      ], [
+        'name.required' => 'O nome do produto é obrigatório.',
+        'name.unique' => 'Já existe um produto com este nome.',
+        'description.required' => 'A descrição do produto é obrigatória.',
+        'selectedCategory.required' => 'A categoria do produto é obrigatória.',
+        'selectedBrand.required' => 'A marca do produto é obrigatória.',
       ]);
 
       if ($this->productId) {
@@ -126,6 +154,7 @@ class Home extends Component
         if ($product) {
           $product->update([
             'name' => $this->name,
+            'description' => $this->description,
             'category_id' => $this->selectedCategory,
             'brand_id' => $this->selectedBrand,
           ]);
@@ -136,8 +165,11 @@ class Home extends Component
       } else {
         Product::create([
           'name' => $this->name,
+          'description' => $this->description,
           'category_id' => $this->selectedCategory,
           'brand_id' => $this->selectedBrand,
+          'price' => 0,
+          'stock' => 0,
         ]);
         $this->addAlert('Produto criado com sucesso!', 'success');
       }
@@ -157,8 +189,8 @@ class Home extends Component
     } else {
       $this->addAlert('Produto não encontrado.', 'error');
     }
-
     $this->closeModal();
+    $this->closeConfirmDeleteModal();
   }
 
   public function render()

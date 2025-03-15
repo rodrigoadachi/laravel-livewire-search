@@ -1,7 +1,8 @@
 @props([
   'name',
   'options' => [],
-  'model' => null, // Certifique-se de que isso está sendo passado corretamente
+  'model' => null,
+  'value' => null,
   'placeholder' => 'Selecione',
   'live' => false,
   'disabled' => false,
@@ -10,7 +11,7 @@
 
 <div
   class="relative w-full"
-  x-data="selectDropdown(@entangle($model), {{ json_encode($options) }}, '{{ $placeholder }}', {{ $multiple ? 'true' : 'false' }})"
+  x-data="selectDropdown(@entangle($model), {{ json_encode($options) }}, '{{ $placeholder }}', {{ $multiple ? 'true' : 'false' }}, '{{ $value }}')"
   @click.away="closeDropdown"
 >
   {{-- Campo de seleção --}}
@@ -42,7 +43,7 @@
               type="checkbox"
               wire:model{{ $live ? '.live' : '' }}="{{ $model }}"
               value="{{ $value }}"
-              :checked="isSelected('{{ $value }}')"
+              x-bind:checked="isSelected('{{ $value }}')"
               class="w-4 h-4"
             >
           @else
@@ -50,7 +51,7 @@
               type="radio"
               wire:model{{ $live ? '.live' : '' }}="{{ $model }}"
               value="{{ $value }}"
-              :checked="isSelected('{{ $value }}')"
+              x-bind:checked="isSelected('{{ $value }}')"
               class="w-4 h-4"
             >
           @endif
@@ -61,7 +62,7 @@
   </div>
 
   {{-- Campo hidden para Livewire --}}
-  <input type="hidden" name="{{ $name }}" :value="selected">
+  <input type="hidden" name="{{ $name }}" x-model="selected">
 
   @error($name)
     <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
@@ -70,10 +71,12 @@
 
 {{-- Alpine.js Script --}}
 <script>
-  function selectDropdown(selected, options, placeholder, multiple) {
+  function selectDropdown(selected, options, placeholder, multiple, value) {
     return {
       open: false,
-      selected: multiple ? (selected || []) : (selected || ''),
+      selected: multiple
+        ? (Array.isArray(selected) && selected.length ? selected : (value ? value.split(',') : []))
+        : (selected || value || ''),
       toggleDropdown() {
         this.open = !this.open;
       },
@@ -93,7 +96,7 @@
         }
       },
       isSelected(value) {
-        return multiple ? this.selected.includes(value) : this.selected === value;
+        return multiple ? this.selected.includes(value) : this.selected == value;
       },
       displayText() {
         if (multiple) {
