@@ -62,21 +62,22 @@
 
     {{-- Controles de Paginação --}}
     <div class="flex items-center gap-4">
+
+      <span>Página {{ $data->currentPage() }} de {{ $data->lastPage() }}</span>
+
       <x-button
-        click="$wire.previousPage()"
-        wire:loading.attr="disabled"
+        action="previousPage"
         icon="o-arrow-left"
         :disabled="$data->onFirstPage()"
       />
-
-      <span>Página {{ $data->currentPage() }} de {{ $data->lastPage() }}</span>
 
       <x-button
         click="$wire.nextPage()"
         wire:loading.attr="disabled"
         icon="o-arrow-right"
-        :disabled="$data->onLastPage()"
+        :disabled="!$data->hasMorePages()"
       />
+
     </div>
   </div>
 @endif
