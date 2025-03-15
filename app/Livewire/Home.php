@@ -21,7 +21,7 @@ class Home extends Component
   public $selectedBrand = null;
   public $showModal = false;
   public $isEditing = false;
-  public $perPage = 5;
+  public $perPage = 10;
 
   public $productId, $name, $price, $stock;
 
@@ -33,7 +33,7 @@ class Home extends Component
     $this->query = Request::query('query', '');
     $this->selectedCategories = array_filter(explode(',', Request::query('categories', '')));
     $this->selectedBrands = array_filter(explode(',', Request::query('brands', '')));
-    $this->perPage = Request::query('perPage', 5);
+    $this->perPage = Request::query('perPage', 10);
     $this->page = Request::query('page', 1);
   }
 
@@ -192,7 +192,6 @@ class Home extends Component
       'categories' => implode(',', array_filter($this->selectedCategories)),
       'brands' => implode(',', array_filter($this->selectedBrands)),
       'perPage' => $this->perPage,
-      'page' => $this->page,
     ]);
   }
 
