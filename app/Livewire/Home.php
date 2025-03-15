@@ -8,14 +8,15 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
 use App\Livewire\Traits\WithAlerts;
+use Illuminate\Support\Facades\Request;
 
 class Home extends Component
 {
   use WithPagination, WithAlerts;
 
   public $query = '';
-  public $selectedCategory = null;
-  public $selectedBrand = null;
+  public $selectedCategories = [];
+  public $selectedBrands = [];
   public $showModal = false;
   public $isEditing = false;
 
@@ -26,6 +27,9 @@ class Home extends Component
   public function mount()
   {
     $this->dispatch('show-loading');
+    $this->query = Request::query('query', '');
+    $this->selectedCategories = explode(',', Request::query('categories', ''));
+    $this->selectedBrands = explode(',', Request::query('brands', ''));
   }
 
   public function dehydrate()
@@ -36,22 +40,35 @@ class Home extends Component
   public function updatingQuery()
   {
     $this->resetPage();
+    $this->updateURL();
   }
 
-  public function updatingSelectedCategory()
+  public function updatingSelectedCategories()
   {
     $this->resetPage();
+    $this->updateURL();
   }
 
-  public function updatingSelectedBrand()
+  public function updatingSelectedBrands()
   {
     $this->resetPage();
+    $this->updateURL();
   }
 
   public function clearFilters()
   {
-    $this->reset(['query', 'selectedCategory', 'selectedBrand']);
+    $this->reset(['query', 'selectedCategories', 'selectedBrands']);
     $this->resetPage();
+    $this->updateURL();
+  }
+
+  public function updateURL()
+  {
+    $this->dispatch('update-url', [
+      'query' => $this->query,
+      'categories' => implode(',', array_filter($this->selectedCategories)),
+      'brands' => implode(',', array_filter($this->selectedBrands))
+    ]);
   }
 
   public function openModal($id = null)
@@ -62,12 +79,12 @@ class Home extends Component
       if ($product) {
         $this->productId = $product->id;
         $this->name = $product->name;
-        $this->selectedCategory = $product->category_id;
-        $this->selectedBrand = $product->brand_id;
+        $this->selectedCategories = [$product->category_id];
+        $this->selectedBrands = [$product->brand_id];
         $this->isEditing = true;
       }
     } else {
-      $this->reset(['productId', 'name', 'selectedCategory', 'selectedBrand']);
+      $this->reset(['productId', 'name', 'selectedCategories', 'selectedBrands']);
       $this->isEditing = false;
     }
     $this->showModal = true;
@@ -84,7 +101,7 @@ class Home extends Component
 
   public function closeModal()
   {
-    $this->reset(['productId', 'name', 'selectedCategory', 'selectedBrand', 'showModal']);
+    $this->reset(['productId', 'name', 'selectedCategory', 'selectedBrand', 'showModal', 'price', 'stock']);
   }
 
   public function save()
@@ -94,6 +111,8 @@ class Home extends Component
         'name' => 'required|unique:products,name,' . ($this->productId ?? 'NULL') . ',id',
         'selectedCategory' => 'required',
         'selectedBrand' => 'required',
+        'price' => 'required|numeric|min:0',
+        'stock' => 'required|integer|min:0',
       ]);
 
       if ($this->productId) {
@@ -103,6 +122,8 @@ class Home extends Component
             'name' => $this->name,
             'category_id' => $this->selectedCategory,
             'brand_id' => $this->selectedBrand,
+            'price' => $this->price,
+            'stock' => $this->stock,
           ]);
 
           $this->addAlert('Produto atualizado com sucesso!', 'success');
@@ -114,6 +135,8 @@ class Home extends Component
           'name' => $this->name,
           'category_id' => $this->selectedCategory,
           'brand_id' => $this->selectedBrand,
+          'price' => $this->price,
+          'stock' => $this->stock,
         ]);
 
         $this->addAlert('Produto criado com sucesso!', 'success');
@@ -146,12 +169,12 @@ class Home extends Component
       $products->where('name', 'like', '%' . $this->query . '%');
     }
 
-    if (!empty($this->selectedCategory)) {
-    $products->where('category_id', strval($this->selectedCategory));
+    if (!empty($this->selectedCategories)) {
+      $products->whereIn('category_id', array_filter($this->selectedCategories));
     }
 
-    if (!empty($this->selectedBrand)) {
-      $products->where('brand_id', strval($this->selectedBrand));
+    if (!empty($this->selectedBrands)) {
+      $products->whereIn('brand_id', array_filter($this->selectedBrands));
     }
 
     return view('livewire.home', [

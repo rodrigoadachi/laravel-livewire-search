@@ -10,14 +10,14 @@ use App\Models\Brand;
  */
 class BrandFactory extends Factory
 {
-    protected $model = Brand::class;
+  protected $model = Brand::class;
 
-    public function definition(): array
-    {
-        return [
-            'id' => $this->faker->uuid(),
-            'name' => $this->faker->word(),
-            'description' => $this->faker->sentence(),
-        ];
-    }
+  public function definition(): array
+  {
+    return [
+      'id' => $this->faker->uuid(),
+      'name' => $this->faker->word(),
+      'description' => $this->faker->sentence(),
+    ];
+  }
 }

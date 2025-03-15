@@ -8,10 +8,10 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Category extends Model
 {
-    use HasFactory, HasUuids;
+  use HasFactory, HasUuids;
 
-    protected $keyType = 'string';
-    public $incrementing = false;
+  protected $keyType = 'string';
+  public $incrementing = false;
 
-    protected $fillable = ['name', 'description'];
+  protected $fillable = ['name', 'description'];
 }

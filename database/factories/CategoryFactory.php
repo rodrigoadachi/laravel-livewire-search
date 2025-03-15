@@ -10,14 +10,14 @@ use App\Models\Category;
  */
 class CategoryFactory extends Factory
 {
-    protected $model = Category::class;
+  protected $model = Category::class;
 
-    public function definition(): array
-    {
-        return [
-            'id' => $this->faker->uuid(),
-            'name' => $this->faker->word(),
-            'description' => $this->faker->sentence(),
-        ];
-    }
+  public function definition(): array
+  {
+    return [
+      'id' => $this->faker->uuid(),
+      'name' => $this->faker->word(),
+      'description' => $this->faker->sentence(),
+    ];
+  }
 }

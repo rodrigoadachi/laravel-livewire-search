@@ -10,16 +10,18 @@
 
   <x-select
     name="category"
-    model="selectedCategory"
+    model="selectedCategories"
     :options="$categories->pluck('name', 'id')"
     placeholder="Selecione uma Categoria"
+    multiple
   />
 
   <x-select
     name="brand"
-    model="selectedBrand"
+    model="selectedBrands"
     :options="$brands->pluck('name', 'id')"
     placeholder="Selecione uma Marca"
+    multiple
   />
 
   <x-button
