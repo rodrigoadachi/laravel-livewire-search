@@ -6,7 +6,7 @@
     style="background-color: rgba(0, 0, 0, 0.25);"
   >
     <div
-      class="bg-zinc-900 text-white p-6 rounded-md shadow-lg relative border-zinc-400 border-[0.5px]"
+      class="bg-zinc-900 text-white p-6 rounded-md shadow-lg relative border-zinc-400 drop-shadow-lg"
       style="width: {{ $width }};"
     >
       <h2 class="text-lg font-bold">{{ $title }}</h2>
