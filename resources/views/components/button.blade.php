@@ -4,7 +4,8 @@
   'click' => null,
   'loadingTarget' => null,
   'variant' => 'default',
-  'type' => 'button'
+  'type' => 'button',
+  'icon' => null,
 ])
 
 @php
@@ -28,6 +29,10 @@
   @endif
   class="{{ $selectedStyle }} flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed h-10 w-auto py-2 px-4 whitespace-nowrap relative"
 >
+  @if($icon)
+    <x-dynamic-component :component="'heroicon-' . $icon" class="w-5 h-5" />
+  @endif
+
   <span class="relative z-10">{{ $label }}</span>
 
   <div

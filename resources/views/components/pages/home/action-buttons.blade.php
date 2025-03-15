@@ -6,5 +6,5 @@
   click="$dispatch('show-loading'); $wire.openModal('{{ $item->id }}')"
   wire:loading.attr="disabled"
   :loadingTarget="'openModal.' . $item->id"
-  variant="warning"
+  icon="o-pencil"
 />

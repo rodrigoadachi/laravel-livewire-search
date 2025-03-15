@@ -6,22 +6,25 @@
     name="name"
     placeholder="Buscar Produto"
     model="query"
+    live
   />
 
   <x-select
     name="category"
     model="selectedCategories"
     :options="$categories->pluck('name', 'id')"
-    placeholder="Selecione uma Categoria"
+    placeholder="Selecione Categorias"
     multiple
+    live
   />
 
   <x-select
     name="brand"
     model="selectedBrands"
     :options="$brands->pluck('name', 'id')"
-    placeholder="Selecione uma Marca"
+    placeholder="Selecione Marcas"
     multiple
+    live
   />
 
   <x-button
@@ -29,6 +32,7 @@
     action="clearFilters"
     loadingTarget="clearFilters"
     variant="default"
+    icon="o-trash"
   />
 
   <x-button
@@ -36,5 +40,6 @@
     action="openModal"
     loadingTarget="openModal"
     variant="primary"
+    icon="o-plus"
   />
 </div>

@@ -22,5 +22,23 @@
       </main>
 
       @livewireScripts
+
+      @push('scripts')
+        <script>
+          document.addEventListener('livewire:load', () => {
+            Livewire.on('update-url', (params) => {
+              let url = new URL(window.location.href);
+              Object.keys(params).forEach(key => {
+                if (params[key]) {
+                  url.searchParams.set(key, params[key]);
+                } else {
+                  url.searchParams.delete(key);
+                }
+              });
+              history.pushState({}, '', url);
+            });
+          });
+        </script>
+      @endpush
   </body>
 </html>

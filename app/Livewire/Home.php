@@ -17,10 +17,14 @@ class Home extends Component
   public $query = '';
   public $selectedCategories = [];
   public $selectedBrands = [];
+  public $selectedCategory = null;
+  public $selectedBrand = null;
   public $showModal = false;
   public $isEditing = false;
+  public $perPage = 5;
+  public $page = 1;
 
-  public $productId, $name;
+  public $productId, $name, $price, $stock;
 
   protected $paginationTheme = 'tailwind';
 
@@ -28,8 +32,10 @@ class Home extends Component
   {
     $this->dispatch('show-loading');
     $this->query = Request::query('query', '');
-    $this->selectedCategories = explode(',', Request::query('categories', ''));
-    $this->selectedBrands = explode(',', Request::query('brands', ''));
+    $this->selectedCategories = array_filter(explode(',', Request::query('categories', '')));
+    $this->selectedBrands = array_filter(explode(',', Request::query('brands', '')));
+    $this->perPage = Request::query('perPage', 5);
+    $this->page = Request::query('page', 1);
   }
 
   public function dehydrate()
@@ -55,20 +61,19 @@ class Home extends Component
     $this->updateURL();
   }
 
-  public function clearFilters()
+  public function updated($property)
   {
-    $this->reset(['query', 'selectedCategories', 'selectedBrands']);
-    $this->resetPage();
-    $this->updateURL();
+    if (in_array($property, ['query', 'selectedCategories', 'selectedBrands', 'perPage'])) {
+      $this->resetPage();
+      $this->updateURL();
+    }
   }
 
-  public function updateURL()
+  public function clearFilters()
   {
-    $this->dispatch('update-url', [
-      'query' => $this->query,
-      'categories' => implode(',', array_filter($this->selectedCategories)),
-      'brands' => implode(',', array_filter($this->selectedBrands))
-    ]);
+    $this->reset(['query', 'selectedCategories', 'selectedBrands', 'perPage']);
+    $this->resetPage();
+    $this->updateURL();
   }
 
   public function openModal($id = null)
@@ -111,8 +116,6 @@ class Home extends Component
         'name' => 'required|unique:products,name,' . ($this->productId ?? 'NULL') . ',id',
         'selectedCategory' => 'required',
         'selectedBrand' => 'required',
-        'price' => 'required|numeric|min:0',
-        'stock' => 'required|integer|min:0',
       ]);
 
       if ($this->productId) {
@@ -122,10 +125,7 @@ class Home extends Component
             'name' => $this->name,
             'category_id' => $this->selectedCategory,
             'brand_id' => $this->selectedBrand,
-            'price' => $this->price,
-            'stock' => $this->stock,
           ]);
-
           $this->addAlert('Produto atualizado com sucesso!', 'success');
         } else {
           $this->addAlert('Produto não encontrado.', 'error');
@@ -135,10 +135,7 @@ class Home extends Component
           'name' => $this->name,
           'category_id' => $this->selectedCategory,
           'brand_id' => $this->selectedBrand,
-          'price' => $this->price,
-          'stock' => $this->stock,
         ]);
-
         $this->addAlert('Produto criado com sucesso!', 'success');
       }
 
@@ -163,24 +160,59 @@ class Home extends Component
 
   public function render()
   {
-    $products = Product::query();
+    $productsQuery = Product::query();
 
     if (!empty($this->query)) {
-      $products->where('name', 'like', '%' . $this->query . '%');
+      $productsQuery->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($this->query) . '%']);
     }
 
     if (!empty($this->selectedCategories)) {
-      $products->whereIn('category_id', array_filter($this->selectedCategories));
+      $productsQuery->whereIn('category_id', $this->selectedCategories);
     }
 
     if (!empty($this->selectedBrands)) {
-      $products->whereIn('brand_id', array_filter($this->selectedBrands));
+      $productsQuery->whereIn('brand_id', $this->selectedBrands);
     }
 
     return view('livewire.home', [
-      'products' => $products->paginate(10),
+      'products' => $productsQuery->paginate($this->perPage),
       'categories' => Category::all(),
       'brands' => Brand::all()
     ]);
   }
+
+  public function previousPage()
+  {
+    if ($this->page > 1) {
+
+      $this->setPage($this->page - 1);
+
+      $this->updateURL();
+    }
+  }
+
+  public function nextPage()
+  {
+    if ($this->page < $this->getMaxPage()) {
+      $this->setPage($this->page + 1);
+      $this->updateURL();
+    }
+  }
+
+  private function getMaxPage()
+  {
+    return Product::query()->count() / $this->perPage;
+  }
+
+  public function updateURL()
+  {
+    $this->dispatch('update-url', [
+      'query' => $this->query,
+      'categories' => implode(',', array_filter($this->selectedCategories)),
+      'brands' => implode(',', array_filter($this->selectedBrands)),
+      'perPage' => $this->perPage,
+      'page' => $this->page,
+    ]);
+  }
+
 }
