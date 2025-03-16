@@ -3,20 +3,31 @@
 namespace App\Livewire;
 
 use Livewire\Component;
+use Livewire\WithPagination;
 use App\Models\Brand;
 use App\Livewire\Traits\WithAlerts;
+use Illuminate\Support\Facades\Request;
 
 class Brands extends Component
 {
-  use WithAlerts;
+  use WithPagination, WithAlerts;
 
-  public $brands, $name, $description, $brandId;
+  public $query = '';
   public $isEditing = false;
 
-    public function mount()
+  public $perPage = 10;
+
+  public $showModal = false;
+  public $showConfirmDeleteModal = false;
+  public $brandNameOnDelete = '';
+
+  public $brandId, $name, $description;
+
+  protected $paginationTheme = 'tailwind';
+
+  public function mount()
   {
     $this->dispatch('show-loading');
-    $this->brands = Brand::all();
   }
 
   public function dehydrate()
@@ -24,18 +35,35 @@ class Brands extends Component
     $this->dispatch('hide-loading');
   }
 
-  public function create()
+  public function render()
+  {
+    $brandsQuery = Brand::query();
+
+    if (!empty($this->query)) {
+      $brandsQuery->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($this->query) . '%']);
+    }
+
+    $this->brands = $brandsQuery->orderBy('name', 'asc')->paginate($this->perPage);
+
+    return view('livewire.brands', [
+      'brands' => $brandsQuery->paginate($this->perPage),
+      'perPage' => $this->perPage
+    ]);
+  }
+
+  public function save()
   {
     try {
       $this->validate([
-        'name' => [
-          'required',
-          'unique:brands,name,' . ($this->brandId ?? 'NULL') . ',id'
-        ],
+        'name' => 'required|unique:brands,name,' . ($this->brandId ?? 'NULL') . ',id',
         'description' => 'nullable|string'
+      ], [
+        'name.required' => 'O nome da marca é obrigatório.',
+        'name.unique' => 'Já existe uma marca com este nome.',
+        'description.required' => 'A descrição da marca é obrigatória.',
       ]);
 
-      if ($this->isEditing) {
+      if ($this->brandId) {
         $brand = Brand::find($this->brandId);
         if (!$brand) {
           throw new \Exception('Marca não encontrada.');
@@ -53,54 +81,65 @@ class Brands extends Component
         $this->addAlert('Marca criada com sucesso!', 'success');
       }
 
-      $this->resetFields();
-      $this->brands = Brand::all();
+      $this->closeModal();
     } catch (\Exception $e) {
-      $this->addAlert('Erro ao salvar marca: ' . $e->getMessage(), 'error');
+      $this->addAlert('Erro ao salvar a marca: ' . $e->getMessage(), 'error');
     }
   }
 
-  public function edit($id)
+  public function updatingQuery()
   {
-    $brand = Brand::find($id);
-    if (!$brand) {
-      $this->addAlert('Marca não encontrada.', 'error');
-      return;
-    }
-
-    $this->brandId = $brand->id;
-    $this->name = $brand->name;
-    $this->description = $brand->description;
-    $this->isEditing = true;
+    $this->resetPage();
+    $this->updateURL();
   }
 
-  public function delete($id)
+  public function clearFilters()
   {
-      try {
-          $brand = Brand::find($id);
-          if (!$brand) {
-              throw new \Exception('Marca não encontrada.');
-          }
-          $brand->delete();
-          $this->brands = Brand::all();
-          $this->addAlert('Marca deletada com sucesso!', 'success');
-      } catch (\Exception $e) {
-          $this->addAlert('Erro ao deletar marca: ' . $e->getMessage(), 'error');
+    $this->reset(['query', 'perPage']);
+    $this->resetPage();
+    $this->updateURL();
+  }
+
+  public function openModal($id = null)
+  {
+    $this->dispatch('show-loading');
+    if ($id) {
+      $brand = Brand::find($id);
+      if ($brand) {
+        $this->brandId = $brand->id;
+        $this->name = $brand->name;
+        $this->description = $brand->description;
+        $this->isEditing = true;
       }
+    } else {
+      $this->reset(['brandId', 'name', 'description']);
+      $this->isEditing = false;
+    }
+    $this->showModal = true;
+    $this->dispatch('hide-loading');
+  }
+
+  public function closeModal()
+  {
+    $this->reset(['brandId', 'name', 'description', 'showModal', 'isEditing']);
+  }
+
+  public function closeConfirmDeleteModal()
+  {
+    $this->showConfirmDeleteModal = false;
   }
 
   public function resetFields()
   {
-      $this->reset(['name', 'description', 'brandId', 'isEditing']);
+    $this->reset(['name', 'description', 'brandId', 'isEditing']);
   }
 
-  public function render()
+  public function updateURL()
   {
-      return view('livewire.brands', [
-          'fields' => ['name', 'description'],
-          'items' => $this->brands,
-          'title' => 'Marcas',
-          'isEditing' => $this->isEditing
-      ]);
+    $this->dispatch('update-url', [
+      'query' => $this->query,
+      'perPage' => $this->perPage,
+    ]);
   }
+
 }
