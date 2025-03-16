@@ -47,11 +47,28 @@
       />
 
       <div class="inline-flex justify-end  items-end mt-4 w-full gap-2 ">
-        <x-button label="Cancelar" type="button" action="closeModal" loadingTarget="closeModal" variant="default"/>
+        <x-button
+          label="Cancelar"
+          type="button"
+          action="closeModal"
+          loadingTarget="closeModal"
+          variant="default"
+        />
         @if($isEditing)
-          <x-button label="Deletar" type="button" click="$wire.confirmDeleteModal('{{ $productId }}')" loadingTarget="delete" variant="danger"/>
+          <x-button
+            label="Deletar"
+            type="button"
+            click="$wire.confirmDeleteModal('{{ $productId }}')"
+            loadingTarget="delete"
+            variant="danger"
+          />
         @endif
-        <x-button label="Salvar" type="submit" loadingTarget="save" variant="primary"/>
+        <x-button
+          label="Salvar"
+          type="submit"
+          loadingTarget="save"
+          variant="primary"
+        />
       </div>
 
     </form>
@@ -62,7 +79,7 @@
       <p>Tem certeza que deseja deletar o produto <strong>{{ $productNameOnDelete }}</strong>?</p>
       <div class="inline-flex justify-end  items-end mt-4 w-full gap-2 ">
         <x-button label="Cancelar" type="button" action="closeConfirmDeleteModal" loadingTarget="closeConfirmDeleteModal" variant="default"/>
-        <x-button label="Deletar" type="button" action="delete" loadingTarget="delete" variant="danger"/>
+        <x-button label="Deletar" type="button" click="$wire.delete('{{ $productId }}')" loadingTarget="delete" variant="danger"/>
       </div>
     </div>
   </x-modal>
