@@ -35,17 +35,102 @@ class Home extends Component
   {
     $this->dispatch('show-loading');
     $this->query = Request::query('query', '');
-    $this->selectedCategories = array_filter(explode(',', Request::query('categories', '')));
-    $this->selectedBrands = array_filter(explode(',', Request::query('brands', '')));
     $this->perPage = Request::query('perPage', 10);
     $this->page = Request::query('page', 1);
     $this->sortField = Request::query('sortField', 'name');
     $this->sortDirection = Request::query('sortDirection', 'asc');
+
+    $this->selectedCategories = array_filter(explode(',', Request::query('categories', '')));
+    $this->selectedBrands = array_filter(explode(',', Request::query('brands', '')));
   }
 
   public function dehydrate()
   {
     $this->dispatch('hide-loading');
+  }
+
+  public function render()
+  {
+    $productsQuery = Product::query();
+
+    if (!empty($this->query)) {
+      $productsQuery->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($this->query) . '%']);
+    }
+
+    if (!empty($this->selectedCategories)) {
+      $productsQuery->whereIn('category_id', $this->selectedCategories);
+    }
+
+    if (!empty($this->selectedBrands)) {
+      $productsQuery->whereIn('brand_id', $this->selectedBrands);
+    }
+
+    if ($this->sortField === 'category.name') {
+      $productsQuery->join('categories', 'products.category_id', '=', 'categories.id')
+        ->orderBy('categories.name', $this->sortDirection);
+    } elseif ($this->sortField === 'brand.name') {
+      $productsQuery->join('brands', 'products.brand_id', '=', 'brands.id')
+        ->orderBy('brands.name', $this->sortDirection);
+    } else {
+      $productsQuery->orderBy($this->sortField, $this->sortDirection);
+    }
+
+
+    return view('livewire.home', [
+      'products' => $productsQuery->paginate($this->perPage),
+      'categories' => Category::all(),
+      'brands' => Brand::all(),
+      'perPage' => $this->perPage,
+      'sortField' => $this->sortField,
+      'sortDirection' => $this->sortDirection,
+    ]);
+  }
+
+  public function save()
+  {
+    try {
+      $this->validate([
+        'name' => 'required|unique:products,name,' . ($this->productId ?? 'NULL') . ',id|unique:products,name,' . ($this->productId ?? 'NULL') . ',id',
+        'description' => 'required',
+        'selectedCategory' => 'required',
+        'selectedBrand' => 'required',
+      ], [
+        'name.required' => 'O nome do produto é obrigatório.',
+        'name.unique' => 'Já existe um produto com este nome.',
+        'description.required' => 'A descrição do produto é obrigatória.',
+        'selectedCategory.required' => 'A categoria do produto é obrigatória.',
+        'selectedBrand.required' => 'A marca do produto é obrigatória.',
+      ]);
+
+      if ($this->productId) {
+        $product = Product::find($this->productId);
+        if ($product) {
+          $product->update([
+            'name' => $this->name,
+            'description' => $this->description,
+            'category_id' => $this->selectedCategory,
+            'brand_id' => $this->selectedBrand,
+          ]);
+          $this->addAlert('Produto atualizado com sucesso!', 'success');
+        } else {
+          $this->addAlert('Produto não encontrado.', 'error');
+        }
+      } else {
+        Product::create([
+          'name' => $this->name,
+          'description' => $this->description,
+          'category_id' => $this->selectedCategory,
+          'brand_id' => $this->selectedBrand,
+          'price' => 0,
+          'stock' => 0,
+        ]);
+        $this->addAlert('Produto criado com sucesso!', 'success');
+      }
+
+      $this->closeModal();
+    } catch (\Exception $e) {
+      $this->addAlert('Erro ao salvar o produto: ' . $e->getMessage(), 'error');
+    }
   }
 
   public function updatingQuery()
@@ -102,6 +187,11 @@ class Home extends Component
     $this->dispatch('hide-loading');
   }
 
+  public function closeModal()
+  {
+    $this->reset(['productId', 'name', 'description', 'selectedCategory', 'selectedBrand', 'showModal', 'price', 'stock']);
+  }
+
   public function confirmDeleteModal($id)
   {
     if ($id) {
@@ -111,72 +201,6 @@ class Home extends Component
         $this->productNameOnDelete = $product->name;
       }
       $this->showConfirmDeleteModal = true;
-    }
-  }
-
-  public function closeConfirmDeleteModal()
-  {
-    $this->productNameOnDelete = '';
-    $this->showConfirmDeleteModal = false;
-  }
-
-  public function openNewProductModal()
-  {
-    $this->dispatch('show-loading');
-    $this->reset(['productId', 'name', 'description', 'selectedCategory', 'selectedBrand']);
-    $this->showModal = true;
-    $this->dispatch('hide-loading');
-  }
-
-  public function closeModal()
-  {
-    $this->reset(['productId', 'name', 'description', 'selectedCategory', 'selectedBrand', 'showModal', 'price', 'stock']);
-  }
-
-  public function save()
-  {
-    try {
-      $this->validate([
-        'name' => 'required|unique:products,name,' . ($this->productId ?? 'NULL') . ',id|unique:products,name,' . ($this->productId ?? 'NULL') . ',id',
-        'description' => 'required',
-        'selectedCategory' => 'required',
-        'selectedBrand' => 'required',
-      ], [
-        'name.required' => 'O nome do produto é obrigatório.',
-        'name.unique' => 'Já existe um produto com este nome.',
-        'description.required' => 'A descrição do produto é obrigatória.',
-        'selectedCategory.required' => 'A categoria do produto é obrigatória.',
-        'selectedBrand.required' => 'A marca do produto é obrigatória.',
-      ]);
-
-      if ($this->productId) {
-        $product = Product::find($this->productId);
-        if ($product) {
-          $product->update([
-            'name' => $this->name,
-            'description' => $this->description,
-            'category_id' => $this->selectedCategory,
-            'brand_id' => $this->selectedBrand,
-          ]);
-          $this->addAlert('Produto atualizado com sucesso!', 'success');
-        } else {
-          $this->addAlert('Produto não encontrado.', 'error');
-        }
-      } else {
-        Product::create([
-          'name' => $this->name,
-          'description' => $this->description,
-          'category_id' => $this->selectedCategory,
-          'brand_id' => $this->selectedBrand,
-          'price' => 0,
-          'stock' => 0,
-        ]);
-        $this->addAlert('Produto criado com sucesso!', 'success');
-      }
-
-      $this->closeModal();
-    } catch (\Exception $e) {
-      $this->addAlert('Erro ao salvar o produto: ' . $e->getMessage(), 'error');
     }
   }
 
@@ -193,41 +217,18 @@ class Home extends Component
     $this->closeConfirmDeleteModal();
   }
 
-  public function render()
+  public function closeConfirmDeleteModal()
   {
-    $productsQuery = Product::query();
+    $this->productNameOnDelete = '';
+    $this->showConfirmDeleteModal = false;
+  }
 
-    if (!empty($this->query)) {
-      $productsQuery->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($this->query) . '%']);
-    }
-
-    if (!empty($this->selectedCategories)) {
-      $productsQuery->whereIn('category_id', $this->selectedCategories);
-    }
-
-    if (!empty($this->selectedBrands)) {
-      $productsQuery->whereIn('brand_id', $this->selectedBrands);
-    }
-
-    if ($this->sortField === 'category.name') {
-      $productsQuery->join('categories', 'products.category_id', '=', 'categories.id')
-        ->orderBy('categories.name', $this->sortDirection);
-    } elseif ($this->sortField === 'brand.name') {
-      $productsQuery->join('brands', 'products.brand_id', '=', 'brands.id')
-        ->orderBy('brands.name', $this->sortDirection);
-    } else {
-      $productsQuery->orderBy($this->sortField, $this->sortDirection);
-    }
-
-
-    return view('livewire.home', [
-      'products' => $productsQuery->paginate($this->perPage),
-      'categories' => Category::all(),
-      'brands' => Brand::all(),
-      'perPage' => $this->perPage,
-      'sortField' => $this->sortField,
-      'sortDirection' => $this->sortDirection,
-    ]);
+  public function openNewProductModal()
+  {
+    $this->dispatch('show-loading');
+    $this->reset(['productId', 'name', 'description', 'selectedCategory', 'selectedBrand']);
+    $this->showModal = true;
+    $this->dispatch('hide-loading');
   }
 
   public function sortBy($field)

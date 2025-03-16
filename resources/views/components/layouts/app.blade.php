@@ -11,7 +11,7 @@
     class="min-h-screen min-w-screen h-full w-full flex flex-col items-start justify-start bg-zinc-800 text-zinc-200"
   >
 
-      <x-header />
+      <x-global.header />
 
       <main
         class="container h-full w-full overflow-x-hidden overflow-y-auto flex flex-col items-start justify-start bg-zinc-800 text-zinc-200 relative"

@@ -2,7 +2,7 @@
   $activeClass = 'text-zinc-50 border-b-2 border-primary inline-block pb-2';
   $inactiveClass = 'text-zinc-200 hover:text-zinc-400 transition-all duration-400';
   $menuItems = [
-    'home' => 'Home',
+    'home' => 'Produtos',
     'categories' => 'Categorias',
     'brands' => 'Marcas'
   ];
