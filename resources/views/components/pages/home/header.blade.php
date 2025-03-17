@@ -10,8 +10,9 @@
   />
 
   <x-select
-    name="category"
+    name="categories"
     model="selectedCategories"
+    :value="$selectedCategories ?? []"
     :options="$categories->pluck('name', 'id')"
     placeholder="Selecione Categorias"
     multiple
@@ -19,13 +20,15 @@
   />
 
   <x-select
-    name="brand"
+    name="brands"
     model="selectedBrands"
+    :value="$selectedBrands ?? []"
     :options="$brands->pluck('name', 'id')"
     placeholder="Selecione Marcas"
     multiple
     live
   />
+
 
   <x-button
     label="Limpar Filtros"
@@ -43,3 +46,4 @@
     icon="o-plus"
   />
 </div>
+

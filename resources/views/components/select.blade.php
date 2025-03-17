@@ -2,16 +2,15 @@
   'name',
   'options' => [],
   'model' => null,
-  'value' => null,
   'placeholder' => 'Selecione',
+  'multiple' => false,
   'live' => false,
-  'disabled' => false,
-  'multiple' => false
 ])
 
 <div
   class="relative w-full"
-  x-data="selectDropdown(@entangle($model), {{ json_encode($options) }}, '{{ $placeholder }}', {{ $multiple ? 'true' : 'false' }}, '{{ $value }}')"
+  x-data="multiSelectDropdown(@entangle($model).defer, {{ json_encode($options) }}, '{{ $placeholder }}', '{{ $name }}', {{ $multiple ? 'true' : 'false' }})"
+  x-init="init()"
   @click.away="closeDropdown"
 >
   {{-- Campo de seleção --}}
@@ -38,23 +37,13 @@
           class="cursor-pointer p-2 hover:bg-zinc-700 flex items-center gap-2"
           @click="toggleSelection('{{ $value }}')"
         >
-          @if ($multiple)
-            <input
-              type="checkbox"
-              wire:model{{ $live ? '.live' : '' }}="{{ $model }}"
-              value="{{ $value }}"
-              x-bind:checked="isSelected('{{ $value }}')"
-              class="w-4 h-4"
-            >
-          @else
-            <input
-              type="radio"
-              wire:model{{ $live ? '.live' : '' }}="{{ $model }}"
-              value="{{ $value }}"
-              x-bind:checked="isSelected('{{ $value }}')"
-              class="w-4 h-4"
-            >
-          @endif
+          <input
+            type="checkbox"
+            wire:model{{ $live ? '.live' : '.defer' }}="{{ $model }}"
+            value="{{ $value }}"
+            x-bind:checked="isSelected('{{ $value }}')"
+            class="w-4 h-4 cursor-pointer"
+          >
           <span>{{ $label }}</span>
         </li>
       @endforeach
@@ -69,14 +58,19 @@
   @enderror
 </div>
 
-{{-- Alpine.js Script --}}
 <script>
-  function selectDropdown(selected, options, placeholder, multiple, value) {
+  function multiSelectDropdown(selected, options, placeholder, paramName, multiple) {
     return {
       open: false,
-      selected: multiple
-        ? (Array.isArray(selected) && selected.length ? selected : (value ? value.split(',') : []))
-        : (selected || value || ''),
+      selected: [],
+      init() {
+        setTimeout(() => {
+          this.selected = this.getSelectedFromUrl(paramName) || selected;
+          this.$watch('selected', (value) => {
+            this.$wire.set(paramName, value);
+          });
+        }, 100);
+      },
       toggleDropdown() {
         this.open = !this.open;
       },
@@ -94,6 +88,7 @@
           this.selected = value;
           this.closeDropdown();
         }
+        this.updateUrl(paramName);
       },
       isSelected(value) {
         return multiple ? this.selected.includes(value) : this.selected == value;
@@ -103,6 +98,20 @@
           return this.selected.length ? this.selected.map(id => options[id]).join(', ') : placeholder;
         }
         return options[this.selected] || placeholder;
+      },
+      getSelectedFromUrl(paramName) {
+        const params = new URLSearchParams(window.location.search);
+        const values = params.get(paramName);
+        return values ? values.split(',') : [];
+      },
+      updateUrl(paramName) {
+        const params = new URLSearchParams(window.location.search);
+        if (this.selected.length) {
+          params.set(paramName, this.selected.join(','));
+        } else {
+          params.delete(paramName);
+        }
+        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
       }
     }
   }

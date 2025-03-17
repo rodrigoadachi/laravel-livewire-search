@@ -21,7 +21,14 @@
   <x-pages.home.header :categories="$categories" :brands="$brands" />
 
   <div class="mt-4 w-full">
-    <x-table :data="$products" :config="$config" itemCountText="Produtos cadastrados" :sortField="$sortField" :sortDirection="$sortDirection" />
+    <x-table
+      :data="$products"
+      :config="$config"
+      itemCountText="Produtos cadastrados"
+      :sortField="$sortField"
+      :sortDirection="$sortDirection"
+      wire:key="table-{{ implode('-', $selectedCategories) }}-{{ implode('-', $selectedBrands) }}"
+    />
   </div>
 
   <x-modal :title="$isEditing ? 'Editar Produto' : 'Adicionar Produto'" width="50%" :show="$showModal">

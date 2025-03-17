@@ -25,6 +25,8 @@ class Products extends BaseCrudComponent
   public $selectedBrand = null;
   public $showConfirmDeleteModal = false;
   public $productNameOnDelete = '';
+  public $brands = [];
+  public $categories = [];
 
   public $productId, $name, $description, $price, $stock;
 
@@ -34,14 +36,30 @@ class Products extends BaseCrudComponent
   {
     $this->dispatch('show-loading');
 
-    $this->query = Request::query('query', '');
-    $this->perPage = Request::query('perPage', 10);
-    $this->page = Request::query('page', 1);
-    $this->sortField = Request::query('sortField', 'name');
-    $this->sortDirection = Request::query('sortDirection', 'asc');
+    $this->query = request()->query('query', '');
+    $this->selectedCategories = collect(request()->query('categories', ''))
+      ->filter()
+      ->flatMap(fn($value) => explode(',', $value))
+      ->filter()
+      ->unique()
+      ->values()
+      ->toArray();
 
-    $this->selectedCategories = array_filter(explode(',', Request::query('categories', '')));
-    $this->selectedBrands = array_filter(explode(',', Request::query('brands', '')));
+    $this->selectedBrands = collect(request()->query('brands', ''))
+      ->filter()
+      ->flatMap(fn($value) => explode(',', $value))
+      ->filter()
+      ->unique()
+      ->values()
+      ->toArray();
+
+    $this->perPage = request()->query('perPage', 10);
+    $this->sortField = request()->query('sortField', 'name');
+    $this->sortDirection = request()->query('sortDirection', 'asc');
+    $this->page = request()->query('page', 1);
+
+    $this->categories = Category::all();
+    $this->brands = Brand::all();
   }
 
   public function dehydrate()
@@ -58,13 +76,15 @@ class Products extends BaseCrudComponent
         $this->selectedBrands,
         $this->sortField,
         $this->sortDirection,
-        $this->perPage
+        $this->perPage,
       ),
-      'categories' => Category::all(),
-      'brands' => Brand::all(),
+      'categories' => $this->categories,
+      'brands' => $this->brands,
       'perPage' => $this->perPage,
       'sortField' => $this->sortField,
       'sortDirection' => $this->sortDirection,
+      'selectedCategories' => $this->selectedCategories,
+      'selectedBrands' => $this->selectedBrands,
     ]);
   }
 
@@ -116,14 +136,6 @@ class Products extends BaseCrudComponent
   {
     $this->resetPage();
     $this->updateURL();
-  }
-
-  public function updated($property)
-  {
-    if (in_array($property, ['query', 'selectedCategories', 'selectedBrands', 'perPage'])) {
-      $this->resetPage();
-      $this->updateURL();
-    }
   }
 
   public function clearFilters()
@@ -180,11 +192,12 @@ class Products extends BaseCrudComponent
   {
     $this->dispatch('update-url', [
       'query' => $this->query,
-      'categories' => implode(',', array_filter($this->selectedCategories)),
-      'brands' => implode(',', array_filter($this->selectedBrands)),
+      'categories' => implode(',', $this->selectedCategories),
+      'brands' => implode(',', $this->selectedBrands),
       'perPage' => $this->perPage,
       'sortField' => $this->sortField,
       'sortDirection' => $this->sortDirection,
+      'page' => $this->page,
     ]);
   }
 
@@ -210,4 +223,18 @@ class Products extends BaseCrudComponent
   {
     $this->reset(['productId', 'name', 'description', 'selectedCategory', 'selectedBrand']);
   }
+
+  public function updated($property)
+  {
+    if (in_array($property, ['query', 'selectedCategories', 'selectedBrands', 'perPage', 'sortField', 'sortDirection', 'page'])) {
+      $this->updateURL();
+    }
+  }
+
+  public function updatingPage($value)
+  {
+    $this->page = $value;
+    $this->updateURL();
+  }
+
 }

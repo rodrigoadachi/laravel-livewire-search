@@ -8,6 +8,9 @@ class ProductService
 {
   public function getProducts($query, $selectedCategories, $selectedBrands, $sortField, $sortDirection, $perPage)
   {
+    $selectedCategories = is_array($selectedCategories) ? $selectedCategories : explode(',', $selectedCategories);
+    $selectedBrands = is_array($selectedBrands) ? $selectedBrands : explode(',', $selectedBrands);
+
     $products = Product::query()
       ->when(!empty($query), fn($q) => $q->where('name', 'LIKE', "%$query%"))
       ->when(!empty($selectedCategories), fn($q) => $q->whereIn('category_id', $selectedCategories))
@@ -21,11 +24,24 @@ class ProductService
         $q->join('brands', 'products.brand_id', '=', 'brands.id')
           ->orderBy('brands.name', $sortDirection);
       })
-      ->when($sortField !== 'category.name' && $sortField !== 'brand.name', function($q) use ($sortField, $sortDirection) {
+      ->when(!in_array($sortField, ['category.name', 'brand.name']), function($q) use ($sortField, $sortDirection) {
         $q->orderBy($sortField, $sortDirection);
       })
       ->paginate($perPage);
 
     return $products;
   }
+
+  public function updatedSelectedCategories()
+  {
+    $this->resetPage();
+    $this->updateURL();
+  }
+
+  public function updatedSelectedBrands()
+  {
+    $this->resetPage();
+    $this->updateURL();
+  }
+
 }
