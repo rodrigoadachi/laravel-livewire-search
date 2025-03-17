@@ -1,7 +1,8 @@
 @props([
-  'name',
+  'name' => '',
   'options' => [],
-  'model' => null,
+  'model' => '',
+  'value' => null,
   'placeholder' => 'Selecione',
   'multiple' => false,
   'live' => false,
@@ -9,7 +10,15 @@
 
 <div
   class="relative w-full"
-  x-data="multiSelectDropdown(@entangle($model).defer, {{ json_encode($options) }}, '{{ $placeholder }}', '{{ $name }}', {{ $multiple ? 'true' : 'false' }})"
+  x-data="multiSelectDropdown(
+    @entangle($model).{{ $live ? 'live' : 'defer' }},
+    {{ json_encode($options) }},
+    '{{ $placeholder }}',
+    '{{ $name }}',
+    {{ $multiple ? 'true' : 'false' }},
+    {{ $live ? 'true' : 'false' }},
+    {{ json_encode($value) }}
+  )"
   x-init="init()"
   @click.away="closeDropdown"
 >
@@ -32,18 +41,18 @@
     class="absolute z-10 mt-1 w-full bg-zinc-900 border border-gray-600 rounded-md shadow-lg max-h-48 overflow-auto"
   >
     <ul class="p-2">
-      @foreach ($options as $value => $label)
+      @foreach ($options as $option => $label)
         <li
           class="cursor-pointer p-2 hover:bg-zinc-700 flex items-center gap-2"
-          @click="toggleSelection('{{ $value }}')"
+          @click="toggleSelection('{{ $option }}')"
         >
           <input
-            type="checkbox"
+            type="{{ $multiple ? 'checkbox' : 'radio' }}"
             wire:model{{ $live ? '.live' : '.defer' }}="{{ $model }}"
-            value="{{ $value }}"
-            x-bind:checked="isSelected('{{ $value }}')"
+            value="{{ $option }}"
+            x-bind:checked="isSelected('{{ $option }}')"
             class="w-4 h-4 cursor-pointer"
-          >
+          />
           <span>{{ $label }}</span>
         </li>
       @endforeach
@@ -59,16 +68,25 @@
 </div>
 
 <script>
-  function multiSelectDropdown(selected, options, placeholder, paramName, multiple) {
+  function multiSelectDropdown(selected, options, placeholder, paramName, multiple, live, value ) {
     return {
       open: false,
-      selected: [],
+      selected: multiple ? (Array.isArray(selected) ? selected : []) : selected || '',
       init() {
         setTimeout(() => {
-          this.selected = this.getSelectedFromUrl(paramName) || selected;
-          this.$watch('selected', (value) => {
-            this.$wire.set(paramName, value);
-          });
+          const urlSelected = this.getSelectedFromUrl(paramName);
+
+          if (multiple) {
+            this.selected = Array.isArray(urlSelected) && urlSelected.length ? urlSelected : (Array.isArray(selected) ? selected : []);
+          } else {
+            this.selected = value || selected || '';
+          }
+
+          if (live) {
+            this.$watch('selected', (value) => {
+              this.$wire.set(paramName, value);
+            });
+          }
         }, 100);
       },
       toggleDropdown() {
@@ -79,6 +97,10 @@
       },
       toggleSelection(value) {
         if (multiple) {
+          if (!Array.isArray(this.selected)) {
+            this.selected = [];
+          }
+
           if (this.selected.includes(value)) {
             this.selected = this.selected.filter(item => item !== value);
           } else {
@@ -91,28 +113,37 @@
         this.updateUrl(paramName);
       },
       isSelected(value) {
-        return multiple ? this.selected.includes(value) : this.selected == value;
+        return multiple ? this.selected.length && this.selected.includes(value) : this.selected == value;
       },
       displayText() {
         if (multiple) {
-          return this.selected.length ? this.selected.map(id => options[id]).join(', ') : placeholder;
+          return this.selected.length > 0
+            ? (this.selected.length > 3
+              ? `${this.selected.length} selecionados`
+              : this.selected.map(id => options[id]).join(', '))
+            : placeholder;
         }
         return options[this.selected] || placeholder;
       },
       getSelectedFromUrl(paramName) {
         const params = new URLSearchParams(window.location.search);
         const values = params.get(paramName);
-        return values ? values.split(',') : [];
+        return values ? (multiple ? values.split(',') : [values]) : (multiple ? [] : []);
       },
       updateUrl(paramName) {
         const params = new URLSearchParams(window.location.search);
-        if (this.selected.length) {
-          params.set(paramName, this.selected.join(','));
+        if (multiple) {
+          if (this.selected.length) {
+            params.set(paramName, this.selected.join(','));
+          } else {
+            params.delete(paramName);
+          }
         } else {
-          params.delete(paramName);
+          params.set(paramName, this.selected);
         }
         window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
       }
-    }
+    };
   }
 </script>
+

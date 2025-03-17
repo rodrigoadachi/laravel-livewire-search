@@ -43,6 +43,7 @@
         :value="$selectedCategory"
         :options="$categories->pluck('name', 'id')"
         placeholder="Selecione uma Categoria"
+        live
       />
 
       <x-select
@@ -51,6 +52,7 @@
         :value="$selectedBrand"
         :options="$brands->pluck('name', 'id')"
         placeholder="Selecione uma Marca"
+        live
       />
 
       <div class="inline-flex justify-end  items-end mt-4 w-full gap-2 ">

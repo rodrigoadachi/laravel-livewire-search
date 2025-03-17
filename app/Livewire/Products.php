@@ -23,44 +23,41 @@ class Products extends BaseCrudComponent
   public $selectedBrands = [];
   public $selectedCategory = null;
   public $selectedBrand = null;
+
   public $showConfirmDeleteModal = false;
   public $productNameOnDelete = '';
   public $brands = [];
   public $categories = [];
 
-  public $productId, $name, $description, $price, $stock;
+  public $productId, $name, $description, $price, $stock, $brand, $category;
 
   protected $paginationTheme = 'tailwind';
 
   public function mount()
-  {
+{
     $this->dispatch('show-loading');
 
     $this->query = request()->query('query', '');
-    $this->selectedCategories = collect(request()->query('categories', ''))
-      ->filter()
-      ->flatMap(fn($value) => explode(',', $value))
-      ->filter()
-      ->unique()
-      ->values()
-      ->toArray();
 
-    $this->selectedBrands = collect(request()->query('brands', ''))
-      ->filter()
-      ->flatMap(fn($value) => explode(',', $value))
-      ->filter()
-      ->unique()
-      ->values()
-      ->toArray();
+    $this->selectedCategories = request()->filled('categories')
+        ? explode(',', request()->query('categories'))
+        : [];
+
+    $this->selectedBrands = request()->filled('brands')
+        ? explode(',', request()->query('brands'))
+        : [];
+
+    $this->categories = Category::all();
+    $this->brands = Brand::all();
 
     $this->perPage = request()->query('perPage', 10);
     $this->sortField = request()->query('sortField', 'name');
     $this->sortDirection = request()->query('sortDirection', 'asc');
     $this->page = request()->query('page', 1);
 
-    $this->categories = Category::all();
-    $this->brands = Brand::all();
-  }
+    $this->dispatch('hide-loading');
+}
+
 
   public function dehydrate()
   {
@@ -69,15 +66,17 @@ class Products extends BaseCrudComponent
 
   public function render()
   {
+    $products = app(ProductService::class)->getProducts(
+      $this->query,
+      $this->selectedCategories,
+      $this->selectedBrands,
+      $this->sortField,
+      $this->sortDirection,
+      $this->perPage,
+    );
+
     return view('livewire.home', [
-      'products' => app(ProductService::class)->getProducts(
-        $this->query,
-        $this->selectedCategories,
-        $this->selectedBrands,
-        $this->sortField,
-        $this->sortDirection,
-        $this->perPage,
-      ),
+      'products' => $products,
       'categories' => $this->categories,
       'brands' => $this->brands,
       'perPage' => $this->perPage,
@@ -88,61 +87,26 @@ class Products extends BaseCrudComponent
     ]);
   }
 
-  public function save()
-  {
-    try {
-      $request = new ProductRequest();
-      $request->merge(['productId' => $this->productId]);
-
-      $validated = $this->validate(
-        $request->rules(),
-        $request->messages()
-      );
-
-      $data = [
-        'name' => $validated['name'],
-        'description' => $validated['description'],
-        'category_id' => $validated['selectedCategory'],
-        'brand_id' => $validated['selectedBrand'],
-        'price' => 0,
-        'stock' => 0,
-      ];
-
-      Product::updateOrCreate(
-        ['id' => $this->productId],
-        $data
-      );
-
-      $this->addAlert($this->productId ? 'Produto atualizado!' : 'Produto criado!', 'success');
-      $this->closeModal();
-    } catch (\Exception $e) {
-      $this->addAlert('Erro: ' . $e->getMessage(), 'error');
-    }
-  }
-
   public function updatingQuery()
   {
     $this->resetPage();
     $this->updateURL();
   }
 
-  public function updatingSelectedCategories()
+  public function updatingSelectedCategories($value)
   {
-    $this->resetPage();
-    $this->updateURL();
+    $this->updatingQuery();
   }
 
-  public function updatingSelectedBrands()
+  public function updatingSelectedBrands($value)
   {
-    $this->resetPage();
-    $this->updateURL();
+    $this->updatingQuery();
   }
 
   public function clearFilters()
   {
     $this->reset(['query', 'selectedCategories', 'selectedBrands', 'perPage']);
-    $this->resetPage();
-    $this->updateURL();
+    $this->updatingQuery();
   }
 
   public function confirmDeleteModal($id)
@@ -167,6 +131,9 @@ class Products extends BaseCrudComponent
   {
     $this->dispatch('show-loading');
     $this->reset(['productId', 'name', 'description', 'selectedCategory', 'selectedBrand']);
+    $this->selectedCategory = null;
+    $this->selectedBrand = null;
+    $this->isEditing = false;
     $this->showModal = true;
     $this->dispatch('hide-loading');
   }
@@ -207,16 +174,77 @@ class Products extends BaseCrudComponent
       $this->model = $this->findById($id);
       $this->name = $this->model->name;
       $this->description = $this->model->description;
-      $this->selectedCategory = $this->model->category_id;
-      $this->selectedBrand = $this->model->brand_id;
+      $this->selectedCategory = (string)$this->model->category_id;
+      $this->selectedBrand = (string)$this->model->brand_id;
       $this->isEditing = true;
       $this->productId = $id;
     } else {
       $this->resetFields();
       $this->isEditing = false;
     }
+
     $this->dispatch('hide-loading');
     $this->showModal = true;
+  }
+
+  public function save()
+  {
+    try {
+      $validated = [];
+      try {
+        $validated = $this->validate([
+            'name' => 'required|unique:products,name,' . ($this->productId ?? 'NULL') . ',id',
+            'description' => 'required',
+            'selectedCategory' => 'required|uuid|exists:categories,id',
+            'selectedBrand' => 'required|uuid|exists:brands,id',
+        ], [
+            'name.required' => 'O nome do produto é obrigatório.',
+            'name.unique' => 'Já existe um produto com este nome.',
+            'description.required' => 'A descrição do produto é obrigatória.',
+            'selectedCategory.required' => 'A categoria é obrigatória.',
+            'selectedBrand.required' => 'A marca é obrigatória.',
+        ]);
+
+    } catch (\Exception $e) {
+        $this->addAlert('Erro: ' . $e->getMessage(), 'error');
+
+        return;
+    }
+
+    if ($this->productId) {
+
+      $product = Product::find($this->productId);
+
+      if (!$product) {
+        $this->addAlert('Produto não encontrado!', 'error');
+        return;
+      }
+
+      $product->update([
+        'name' => $this->name,
+        'description' => $this->description,
+        'category_id' => $this->selectedCategory,
+        'brand_id' => $this->selectedBrand,
+      ]);
+
+      $this->addAlert('Produto atualizado!', 'success');
+      $this->closeModal();
+      return;
+    } else {
+      Product::create([
+        'name' => $this->name,
+        'description' => $this->description,
+        'category_id' => $this->selectedCategory,
+        'brand_id' => $this->selectedBrand,
+        'price' => 0,
+        'stock' => 0,
+      ]);
+    }
+    $this->addAlert($this->productId ? 'Produto atualizado!' : 'Produto criado!', 'success');
+    $this->closeModal();
+    } catch (\Exception $e) {
+      $this->addAlert('Erro: ' . $e->getMessage(), 'error');
+    }
   }
 
   public function resetFields()

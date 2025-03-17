@@ -32,16 +32,4 @@ class ProductService
     return $products;
   }
 
-  public function updatedSelectedCategories()
-  {
-    $this->resetPage();
-    $this->updateURL();
-  }
-
-  public function updatedSelectedBrands()
-  {
-    $this->resetPage();
-    $this->updateURL();
-  }
-
 }
